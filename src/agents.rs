@@ -58,21 +58,35 @@ impl Agent for ProducerAgent {
         let system_prompt = r#"
 You are Agent 1. Produce a solution strictly as JSON matching the schema below. Do not add commentary or markdown. Output ONLY a JSON object.
 
+Descriptions in the schema indicate expected data and type; replace them with actual values in your output.
+
 Schema (SolutionV1):
 {
-  "schema_version": "solution_v1",
-  "task_id": "string",
-  "solution_id": "string",
-  "model_used": { "name": "deepseek-chat", "temperature": 0.2 },
-  "deliverable_type": "text | json | code",
-  "deliverable": {
-    "text": "string if deliverable_type=text",
-    "json": { "any": "valid json if deliverable_type=json" },
-    "code": { "language": "rs|py|...", "content": "..." }
+  "schema_version": "Schema version identifier; must be 'solution_v1' (string)",
+  "task_id": "Identifier of the task being solved (string)",
+  "solution_id": "Unique identifier for this solution (string)",
+  "model_used": {
+    "name": "Model name used to generate the solution, e.g., 'deepseek-chat' (string)",
+    "temperature": "Sampling temperature used for generation (number)"
   },
-  "evidence": { "system_prompt": "truncated", "usage_note": "optional" },
-  "usage": { "prompt_tokens": 0, "completion_tokens": 0 },
-  "created_at": "RFC3339 timestamp"
+  "deliverable_type": "Type of deliverable: 'text' | 'json' | 'code' (string)",
+  "deliverable": {
+    "text": "Plain text content if deliverable_type='text' (string or null)",
+    "json": "JSON content if deliverable_type='json' (object/array/value or null)",
+    "code": {
+      "language": "Programming language for the code deliverable, e.g., 'rs', 'py' (string)",
+      "content": "Source code content if deliverable_type='code' (string)"
+    }
+  },
+  "evidence": {
+    "system_prompt": "Truncated copy of the system prompt used (string)",
+    "usage_note": "Optional notes about generation context or constraints (string or null)"
+  },
+  "usage": {
+    "prompt_tokens": "Number of prompt tokens consumed (integer)",
+    "completion_tokens": "Number of completion tokens generated (integer)"
+  },
+  "created_at": "Creation timestamp in RFC3339 format, UTC (string)"
 }
 "#;
 
@@ -148,19 +162,30 @@ impl Agent for AuditorAgent {
         let system_prompt = r#"
 You are Agent 2. Given TaskSpec and a SolutionV1, grade it strictly against acceptance_criteria. Output ONLY JSON matching ValidationV1.
 
+Descriptions in the schema indicate expected data and type; replace them with actual values in your output.
+
 Schema (ValidationV1):
 {
-  "schema_version": "validation_v1",
-  "task_id": "string",
-  "solution_id": "string",
-  "verdict": "pass | warn | fail",
-  "score": 0.0,
+  "schema_version": "Schema version identifier; must be 'validation_v1' (string)",
+  "task_id": "Identifier of the task being validated (string)",
+  "solution_id": "Identifier of the solution under review (string)",
+  "verdict": "Overall result: 'pass' | 'warn' | 'fail' (string)",
+  "score": "Normalized score in [0.0, 1.0] reflecting quality/compliance (number)",
   "checks": [
-    { "criterion": "...", "pass": true, "reason": "...", "severity": "minor | major", "suggested_fix": "optional" }
+    {
+      "criterion": "Acceptance criterion being assessed (string)",
+      "pass": "Whether this criterion passed (boolean)",
+      "reason": "Explanation for the outcome (string)",
+      "severity": "Impact level if failing: 'minor' | 'major' (string)",
+      "suggested_fix": "Optional suggestion to remediate a failure (string or null)"
+    }
   ],
-  "suggested_rewrite": { "optional": "e.g., repaired text/json" },
-  "model_used": { "name": "deepseek-reasoner", "temperature": 0 },
-  "created_at": "RFC3339 timestamp"
+  "suggested_rewrite": "Optional repaired content or structured fix (any JSON value or null)",
+  "model_used": {
+    "name": "Model name used for auditing, e.g., 'deepseek-reasoner' (string)",
+    "temperature": "Sampling temperature used for validation (number)"
+  },
+  "created_at": "Creation timestamp in RFC3339 format, UTC (string)"
 }
 "#;
 
