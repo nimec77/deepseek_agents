@@ -3,6 +3,7 @@ mod deepseek;
 mod agents;
 mod types;
 mod console;
+mod orchestrator;
 
 use std::path::PathBuf;
 
@@ -10,10 +11,8 @@ use anyhow::Result;
 use clap::Parser;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use crate::agents::{Agent, AuditInput, AuditorAgent, ProducerAgent};
 use crate::config::Config;
-use crate::console::Console;
-use crate::deepseek::DeepSeekClient;
+use crate::orchestrator::Orchestrator;
 use crate::types::{DeliverableType, TaskSpec};
 
 #[derive(Debug, Parser)]
@@ -43,24 +42,13 @@ async fn main() -> Result<()> {
     // startup information
     tracing::info!("Starting DeepSeek Agents application");
 
-    // base config from env
+    // base config from env and orchestrator setup
     let base_cfg = Config::load()?;
-
-    // agent1 uses deepseek-chat (default)
-    let agent1_client = DeepSeekClient::new(base_cfg.clone())?;
-
-    // agent2 uses deepseek-reasoner
-    let mut reasoner_cfg = base_cfg.clone();
-    reasoner_cfg.model = "deepseek-reasoner".to_string();
-    let agent2_client = DeepSeekClient::new(reasoner_cfg)?;
+    let orchestrator = Orchestrator::new(base_cfg)?;
 
     // If console mode is requested, run interactive ProducerAgent flow and exit
     if args.console_producer {
-        tracing::info!(
-            "Interactive mode: you'll be prompted to enter a task for the ProducerAgent, which will process it and save the result"
-        );
-        let console = Console::new(agent1_client.clone());
-        console.run_producer_agent(&args.out_dir).await?;
+        orchestrator.run_console_producer(&args.out_dir).await?;
         return Ok(());
     }
 
@@ -79,39 +67,7 @@ async fn main() -> Result<()> {
     };
 
     tokio::fs::create_dir_all(&args.out_dir).await?;
-    let solution_path = args.out_dir.join("solution.json");
-    let validation_path = args.out_dir.join("validation.json");
-
-    let agent1 = ProducerAgent::new(agent1_client, solution_path.clone());
-    tracing::info!(
-        "Agent1 (Producer): received task_id={} — processing",
-        task_spec.task_id
-    );
-    // Pretty-print the received task before execution
-    Console::display_task(&task_spec);
-    let solution = agent1.execute(&task_spec).await?;
-    tracing::info!("Agent1 produced solution: {}", solution.solution_id);
-    tracing::info!("Agent1 saved solution to {}", solution_path.display());
-    // Pretty-print solution to console
-    Console::display_solution(&solution);
-
-    let agent2 = AuditorAgent::new(agent2_client, validation_path.clone());
-    tracing::info!(
-        "Agent2 (Auditor): received solution {} from Agent1 — processing",
-        solution.solution_id
-    );
-    let validation = agent2
-        .execute(&AuditInput {
-            task: task_spec,
-            solution,
-        })
-        .await?;
-    tracing::info!("Agent2 verdict: {} (score {:.2})", validation.verdict, validation.score);
-    tracing::info!("Agent2 saved validation to {}", validation_path.display());
-    // Pretty-print validation to console
-    Console::display_validation(&validation);
-
-    println!("Artifacts:\n  {}\n  {}", solution_path.display(), validation_path.display());
+    let _ = orchestrator.run_pipeline(task_spec, &args.out_dir).await?;
     Ok(())
 }
 
