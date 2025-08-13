@@ -2,6 +2,7 @@ mod config;
 mod deepseek;
 mod agents;
 mod types;
+mod console;
 
 use std::path::PathBuf;
 
@@ -11,6 +12,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use crate::agents::{Agent, AuditInput, AuditorAgent, ProducerAgent};
 use crate::config::Config;
+use crate::console::Console;
 use crate::deepseek::DeepSeekClient;
 use crate::types::{DeliverableType, TaskSpec};
 
@@ -23,6 +25,10 @@ struct Args {
     /// Output directory for artifacts
     #[arg(long, default_value = "out")] 
     out_dir: PathBuf,
+
+    /// Run interactive console to collect a task and execute ProducerAgent
+    #[arg(long, default_value_t = false)]
+    console_producer: bool,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -44,6 +50,13 @@ async fn main() -> Result<()> {
     let mut reasoner_cfg = base_cfg.clone();
     reasoner_cfg.model = "deepseek-reasoner".to_string();
     let agent2_client = DeepSeekClient::new(reasoner_cfg)?;
+
+    // If console mode is requested, run interactive ProducerAgent flow and exit
+    if args.console_producer {
+        let console = Console::new(agent1_client.clone());
+        console.run_producer_agent(&args.out_dir).await?;
+        return Ok(());
+    }
 
     // load or construct TaskSpec
     let task_spec: TaskSpec = match &args.task {

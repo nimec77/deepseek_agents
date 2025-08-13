@@ -1,12 +1,15 @@
 use anyhow::{Error, Result};
 use tokio::select;
+use uuid::Uuid;
+use std::path::Path;
+use colored::*;
 
 use crate::deepseek::{DeepSeekClient, DeepSeekError, DeepSeekResponse};
-use crate::taskfinisher::TechnicalTaskArtifact;
+use crate::agents::{Agent, ProducerAgent};
+use crate::types::{TaskSpec, DeliverableType};
 
 mod input;
 mod render;
-mod taskfinisher;
 
 /// Console interface for the DeepSeek application
 pub struct Console {
@@ -47,11 +50,6 @@ impl Console {
     /// Display the structured response from DeepSeek
     pub fn display_response(response: &DeepSeekResponse) {
         render::display_response(response);
-    }
-
-    /// Display a TaskFinisher Technical Task artifact with colored sections
-    pub fn display_taskfinisher_artifact(artifact: &TechnicalTaskArtifact) {
-        render::display_taskfinisher_artifact(artifact);
     }
 
     /// Display an error message with context-aware messaging
@@ -121,11 +119,87 @@ impl Console {
 
         Ok(())
     }
+
+    /// Collect a TaskSpec from the user via interactive prompts.
+    async fn collect_task_spec(&self) -> Result<TaskSpec> {
+        let goal = input::prompt_user("🎯 Goal: ").await?;
+        let input_text = input::prompt_user("📥 Input/context: ").await?;
+
+        let ac_raw = input::prompt_user(
+            "✅ Acceptance criteria (comma or semicolon separated): ",
+        )
+        .await?;
+        let acceptance_criteria: Vec<String> = ac_raw
+            .split([',', ';', '\n'])
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        println!(
+            "{}",
+            "📦 Deliverable type: [1] text  [2] json  [3] code (enter 1/2/3 or name)".blue()
+        );
+        let deliverable_raw = input::prompt_user("Type: ").await?;
+        let deliverable_type = match deliverable_raw.trim().to_lowercase().as_str() {
+            "1" | "text" => DeliverableType::Text,
+            "2" | "json" => DeliverableType::Json,
+            "3" | "code" => DeliverableType::Code,
+            other => {
+                println!(
+                    "{} {}",
+                    "⚠️ Unknown type, defaulting to 'text':".bright_yellow(),
+                    other
+                );
+                DeliverableType::Text
+            }
+        };
+
+        let hints = input::prompt_user("💡 Hints (optional, Enter to skip): ").await?;
+        let hints = if hints.trim().is_empty() { None } else { Some(hints) };
+
+        let task_spec = TaskSpec {
+            task_id: Uuid::new_v4(),
+            goal,
+            input: input_text,
+            acceptance_criteria,
+            deliverable_type,
+            hints,
+        };
+
+        // Show the JSON that will be sent to the agent
+        let pretty = serde_json::to_string_pretty(&task_spec)?;
+        println!("\n{}\n{}\n", "🧾 TaskSpec JSON:".bright_green().bold(), pretty);
+
+        Ok(task_spec)
+    }
+
+    /// Interactive flow: collect a task and run ProducerAgent. Saves to out_dir/solution.json
+    pub async fn run_producer_agent(&self, out_dir: &Path) -> Result<()> {
+        Self::display_welcome();
+
+        let task_spec = self.collect_task_spec().await?;
+
+        tokio::fs::create_dir_all(out_dir).await?;
+        let out_path = out_dir.join("solution.json");
+
+        let agent = ProducerAgent::new(self.client.clone(), out_path.clone());
+        match agent.execute(&task_spec).await {
+            Ok(solution) => {
+                println!(
+                    "{} {}\n  {}",
+                    "✅ ProducerAgent completed.".bright_green().bold(),
+                    format!("solution_id={}", solution.solution_id).bright_white(),
+                    out_path.display()
+                );
+            }
+            Err(e) => {
+                let err: Error = anyhow::anyhow!(e);
+                Self::display_error(&err);
+            }
+        }
+
+        Ok(())
+    }
 }
 
-// Re-export utilities for optional external use
-pub use input::{get_user_input, is_quit_command, prompt_user};
-pub use render::{
-    display_deepseek_error, display_error, display_goodbye, display_loading, display_response,
-    display_taskfinisher_artifact, display_welcome,
-};
