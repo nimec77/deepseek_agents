@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::{Error, Result};
 use tokio::select;
 use std::path::Path;
