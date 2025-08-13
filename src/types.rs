@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")] 
@@ -12,7 +11,7 @@ pub enum DeliverableType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskSpec {
-    pub task_id: Uuid,
+    pub task_id: String,
     pub goal: String,
     pub input: String,
     pub acceptance_criteria: Vec<String>,
@@ -59,8 +58,8 @@ pub struct Usage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SolutionV1 {
     pub schema_version: String, // "solution_v1"
-    pub task_id: Uuid,
-    pub solution_id: Uuid,
+    pub task_id: String,
+    pub solution_id: String,
     pub model_used: ModelUsed,
     pub deliverable_type: DeliverableType,
     pub deliverable: Deliverable,
@@ -105,8 +104,8 @@ pub struct CheckResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationV1 {
     pub schema_version: String, // "validation_v1"
-    pub task_id: Uuid,
-    pub solution_id: Uuid,
+    pub task_id: String,
+    pub solution_id: String,
     pub verdict: Verdict,
     pub score: f32, // [0.0, 1.0]
     pub checks: Vec<CheckResult>,

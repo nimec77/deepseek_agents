@@ -2,6 +2,7 @@ use anyhow::Error;
 use colored::*;
 
 use crate::deepseek::{DeepSeekError, DeepSeekResponse};
+use crate::types::{DeliverableType, SolutionV1, ValidationV1, Verdict};
 
 pub fn display_welcome() {
     println!(
@@ -145,4 +146,129 @@ pub fn display_deepseek_error(error: &DeepSeekError) {
 
 pub fn display_goodbye() {
     println!("{}", "👋 Goodbye!".bright_yellow().bold());
+}
+
+pub fn display_solution(solution: &SolutionV1) {
+    println!("\n{}", "📦 Agent Output (Solution)".bright_cyan().bold());
+    println!("{}", "┌─────────────────────────────────────────────────────────────".cyan());
+    println!(
+        "{} {}",
+        "│ 🆔 Solution ID:".cyan(),
+        solution.solution_id.to_string().bright_white()
+    );
+    println!(
+        "{} {}",
+        "│ 🧩 Task ID:".cyan(),
+        solution.task_id.to_string().white()
+    );
+    println!(
+        "{} {} (temp {:.2})",
+        "│ 🤖 Model:".cyan(),
+        solution.model_used.name.white(),
+        solution.model_used.temperature
+    );
+    println!("{} {}", "│ 🗓️  Created:".cyan(), solution.created_at.white());
+    println!(
+        "{} {}",
+        "│ 📄 Deliverable Type:".cyan(),
+        format!("{:?}", solution.deliverable_type).white()
+    );
+
+    match solution.deliverable_type {
+        DeliverableType::Text => {
+            if let Some(text) = &solution.deliverable.text {
+                println!("{}", "│ ── Text:".cyan());
+                for line in text.lines() {
+                    println!("│   {}", line.white());
+                }
+            }
+        }
+        DeliverableType::Json => {
+            if let Some(json) = &solution.deliverable.json {
+                let pretty = serde_json::to_string_pretty(json).unwrap_or_else(|_| json.to_string());
+                println!("{}", "│ ── JSON:".cyan());
+                for line in pretty.lines() {
+                    println!("│   {}", line.white());
+                }
+            }
+        }
+        DeliverableType::Code => {
+            if let Some(code) = &solution.deliverable.code {
+                println!(
+                    "{} {}",
+                    "│ ── Code (lang):".cyan(),
+                    code.language.white()
+                );
+                println!("{}", "│ ── Content:".cyan());
+                for line in code.content.lines() {
+                    println!("│   {}", line.white());
+                }
+            }
+        }
+    }
+
+    println!(
+        "{} {} / {}",
+        "│ 🔢 Tokens:".cyan(),
+        solution.usage.prompt_tokens.to_string().white(),
+        solution.usage.completion_tokens.to_string().white()
+    );
+    println!("{}", "└─────────────────────────────────────────────────────────────\n".cyan());
+}
+
+pub fn display_validation(validation: &ValidationV1) {
+    println!("\n{}", "🧪 Agent Output (Validation)".bright_magenta().bold());
+    println!("{}", "┌─────────────────────────────────────────────────────────────".magenta());
+    println!(
+        "{} {}",
+        "│ 🆔 Solution ID:".magenta(),
+        validation.solution_id.to_string().bright_white()
+    );
+    println!(
+        "{} {}",
+        "│ 🧩 Task ID:".magenta(),
+        validation.task_id.to_string().white()
+    );
+    let verdict_str = format!("{}", validation.verdict);
+    let verdict_colored = match validation.verdict {
+        Verdict::Pass => verdict_str.bright_green().bold(),
+        Verdict::Warn => verdict_str.bright_yellow().bold(),
+        Verdict::Fail => verdict_str.bright_red().bold(),
+    };
+    println!("{} {} (score {:.2})", "│ ⚖️  Verdict:".magenta(), verdict_colored, validation.score);
+    println!(
+        "{} {} (temp {:.2})",
+        "│ 🤖 Model:".magenta(),
+        validation.model_used.name.white(),
+        validation.model_used.temperature
+    );
+    println!("{} {}", "│ 🗓️  Created:".magenta(), validation.created_at.white());
+
+    if !validation.checks.is_empty() {
+        println!("{}", "│ ── Checks:".magenta());
+        for (idx, chk) in validation.checks.iter().enumerate() {
+            let icon = if chk.pass_ { "✔".bright_green() } else { "✖".bright_red() };
+            println!(
+                "│   {} {}. {}",
+                icon,
+                idx + 1,
+                chk.criterion.bright_white()
+            );
+            println!("│     {} {}", "reason:".white(), chk.reason.white());
+            println!("│     {} {}", "severity:".white(), format!("{:?}", chk.severity).white());
+            if let Some(suggest) = &chk.suggested_fix {
+                println!("│     {} {}", "suggested_fix:".white(), suggest.white());
+            }
+        }
+    }
+
+    if let Some(rewrite) = &validation.suggested_rewrite {
+        let pretty = serde_json::to_string_pretty(rewrite).unwrap_or_else(|_| rewrite.to_string());
+        println!("{}", "│ ── Suggested Rewrite:".magenta());
+        for line in pretty.lines() {
+            println!("│   {}", line.white());
+        }
+    }
+
+    println!("{}", "└─────────────────────────────────────────────────────────────\n".magenta());
 }

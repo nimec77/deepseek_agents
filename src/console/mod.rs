@@ -1,12 +1,11 @@
 use anyhow::{Error, Result};
 use tokio::select;
-use uuid::Uuid;
 use std::path::Path;
 use colored::*;
 
 use crate::deepseek::{DeepSeekClient, DeepSeekError, DeepSeekResponse};
 use crate::agents::{Agent, ProducerAgent};
-use crate::types::{TaskSpec, DeliverableType};
+use crate::types::{TaskSpec, DeliverableType, SolutionV1, ValidationV1};
 
 mod input;
 mod render;
@@ -50,6 +49,16 @@ impl Console {
     /// Display the structured response from DeepSeek
     pub fn display_response(response: &DeepSeekResponse) {
         render::display_response(response);
+    }
+
+    /// Display a pretty-printed SolutionV1 artifact
+    pub fn display_solution(solution: &SolutionV1) {
+        render::display_solution(solution);
+    }
+
+    /// Display a pretty-printed ValidationV1 artifact
+    pub fn display_validation(validation: &ValidationV1) {
+        render::display_validation(validation);
     }
 
     /// Display an error message with context-aware messaging
@@ -168,7 +177,7 @@ impl Console {
         let hints = if hints.trim().is_empty() { None } else { Some(hints) };
 
         let task_spec = TaskSpec {
-            task_id: Uuid::new_v4(),
+            task_id: uuid::Uuid::new_v4().to_string(),
             goal,
             input: input_text,
             acceptance_criteria,
@@ -212,6 +221,8 @@ impl Console {
                     "💾 Saved result to".bright_white(),
                     out_path.display()
                 );
+                // Pretty-print the solution in console
+                Self::display_solution(&solution);
             }
             Err(e) => {
                 let err: Error = anyhow::anyhow!(e);

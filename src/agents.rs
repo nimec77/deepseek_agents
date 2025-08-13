@@ -61,8 +61,8 @@ You are Agent 1. Produce a solution strictly as JSON matching the schema below. 
 Schema (SolutionV1):
 {
   "schema_version": "solution_v1",
-  "task_id": "uuid",
-  "solution_id": "uuid",
+  "task_id": "string",
+  "solution_id": "string",
   "model_used": { "name": "deepseek-chat", "temperature": 0.2 },
   "deliverable_type": "text | json | code",
   "deliverable": {
@@ -151,8 +151,8 @@ You are Agent 2. Given TaskSpec and a SolutionV1, grade it strictly against acce
 Schema (ValidationV1):
 {
   "schema_version": "validation_v1",
-  "task_id": "uuid",
-  "solution_id": "uuid",
+  "task_id": "string",
+  "solution_id": "string",
   "verdict": "pass | warn | fail",
   "score": 0.0,
   "checks": [

@@ -90,6 +90,8 @@ async fn main() -> Result<()> {
     let solution = agent1.execute(&task_spec).await?;
     tracing::info!("Agent1 produced solution: {}", solution.solution_id);
     tracing::info!("Agent1 saved solution to {}", solution_path.display());
+    // Pretty-print solution to console
+    Console::display_solution(&solution);
 
     let agent2 = AuditorAgent::new(agent2_client, validation_path.clone());
     tracing::info!(
@@ -104,16 +106,16 @@ async fn main() -> Result<()> {
         .await?;
     tracing::info!("Agent2 verdict: {} (score {:.2})", validation.verdict, validation.score);
     tracing::info!("Agent2 saved validation to {}", validation_path.display());
+    // Pretty-print validation to console
+    Console::display_validation(&validation);
 
     println!("Artifacts:\n  {}\n  {}", solution_path.display(), validation_path.display());
     Ok(())
 }
 
 fn demo_task_spec() -> TaskSpec {
-    use uuid::Uuid;
-
     TaskSpec {
-        task_id: Uuid::new_v4(),
+        task_id: uuid::Uuid::new_v4().to_string(),
         goal: "Summarize the input text into exactly 3 crisp bullet points".to_string(),
         input: "DeepSeek Agents demo: we need two agents where the first produces a deliverable and the second audits it against acceptance criteria.".to_string(),
         acceptance_criteria: vec![
