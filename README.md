@@ -5,15 +5,15 @@ Small, production-style Rust app that orchestrates two LLM agents end-to-end:
 - **ProducerAgent**: generates a deliverable from a `TaskSpec` using `deepseek-chat`.
 - **AuditorAgent**: evaluates that deliverable against acceptance criteria using `deepseek-reasoner`.
 
-It also includes an interactive console flow for collecting a `TaskSpec` and running the ProducerAgent, robust error handling, JSON-first prompts, and test coverage for the HTTP client.
+It also includes an interactive flow for collecting a `TaskSpec` and running the ProducerAgent, robust error handling, strict JSON prompting, and test coverage for the HTTP client.
 
 ## Features
 
 - **Two-agent pipeline**: Producer → Auditor with separate models.
 - **Strict JSON I/O**: agents prompt for structured JSON (`SolutionV1`, `ValidationV1`).
-- **Interactive mode**: collect a task and save `solution.json`.
-- **Retries and backoff**: transient HTTP failures are retried with exponential backoff.
-- **Graceful cancellation**: `Ctrl+C` cancellation using `tokio::select!`.
+- **Interactive collection**: collect a task and save `solution.json` (`--console-producer`).
+- **Retries and backoff**: transient HTTP failures are retried with exponential backoff (in the console client path).
+- **Graceful cancellation (interactive loop)**: `Ctrl+C` cancellation in the interactive console loop.
 - **Config via env/.env**: typed config with validation.
 - **Logging**: `tracing` with `RUST_LOG` filter.
 - **Tests**: WireMock-powered HTTP tests and async time control.
@@ -108,9 +108,11 @@ Example snippet (solution):
   "schema_version": "solution_v1",
   "task_id": "...",
   "solution_id": "...",
-  "model_used": { "name": "deepseek-chat", "temperature": 0.2 },
+  "model_used": { "name": "deepseek-chat", "temperature": 0.7 },
   "deliverable_type": "text",
   "deliverable": { "text": "- Bullet A\n- Bullet B\n- Bullet C" },
+  "evidence": { "system_prompt": "...", "usage_note": null },
+  "usage": { "prompt_tokens": 0, "completion_tokens": 0 },
   "created_at": "2024-01-01T00:00:00Z"
 }
 ```
@@ -123,22 +125,31 @@ Example snippet (validation):
   "task_id": "...",
   "solution_id": "...",
   "verdict": "pass",
-  "score": 1.0,
-  "checks": [ { "criterion": "exactly 3 bullets", "pass": true, "severity": "minor", "reason": "..." } ],
+  "score": 0.98,
+  "checks": [
+    {
+      "criterion": "exactly 3 bullets",
+      "pass": true,
+      "reason": "...",
+      "severity": "minor",
+      "suggested_fix": null
+    }
+  ],
+  "suggested_rewrite": null,
+  "model_used": { "name": "deepseek-reasoner", "temperature": 0.7 },
   "created_at": "2024-01-01T00:00:00Z"
 }
 ```
 
 ## Architecture overview
 
-- **`src/main.rs`**: CLI, logging, and pipeline orchestration (demo `TaskSpec` if `--task` absent). In pipeline mode: ProducerAgent → AuditorAgent; in `--console-producer` mode: interactive ProducerAgent only.
-- **`src/deepseek.rs`**: HTTP client for DeepSeek Chat Completions. Handles retries/backoff, error mapping, and JSON parsing. Also provides `send_messages_raw` for strict JSON prompting.
-- **`src/agents.rs`**: `Agent` trait and two implementations:
-  - `ProducerAgent` prompts the model to produce `SolutionV1`.
-  - `AuditorAgent` prompts the model to produce `ValidationV1`.
-- **`src/types.rs`**: Strongly-typed schemas (`TaskSpec`, `SolutionV1`, `ValidationV1`, enums).
-- **`src/config.rs`**: Loads and validates configuration from env/.env with sensible defaults.
-- **`src/console/*`**: Interactive I/O and pretty console rendering of responses/artifacts.
+- `src/main.rs`: CLI, logging, and pipeline orchestration (demo `TaskSpec` if `--task` absent). In pipeline mode: ProducerAgent → AuditorAgent; in `--console-producer` mode: interactive ProducerAgent only.
+- `src/deepseek.rs`: HTTP client for DeepSeek Chat Completions. Handles retries/backoff, error mapping, and JSON parsing. Also provides `send_messages_raw` for strict JSON prompting.
+- `src/agents/mod.rs`, `src/agents/producer.rs`, `src/agents/auditor.rs`: `Agent` trait and two implementations.
+- `src/types.rs`: Strongly-typed schemas (`TaskSpec`, `SolutionV1`, `ValidationV1`, enums).
+- `src/config.rs`: Loads and validates configuration from env/.env with sensible defaults.
+- `src/console/*`: Interactive I/O and pretty console rendering of responses/artifacts.
+- `src/orchestrator.rs`: Wires ProducerAgent and AuditorAgent, manages artifacts and console rendering in pipeline mode.
 
 ## Configuration
 
@@ -151,13 +162,13 @@ Example snippet (validation):
 
 ## Development
 
-- **Run tests**:
+- Run tests:
 
 ```bash
 cargo test
 ```
 
-- **Useful env**:
+- Useful env:
 
 ```bash
 RUST_LOG=info    # or debug, trace
@@ -165,22 +176,21 @@ RUST_LOG=info    # or debug, trace
 
 ### Technologies used
 
-- **Runtime/concurrency**: `tokio`
-- **HTTP**: `reqwest` (rustls TLS)
-- **Serialization**: `serde`, `serde_json`
-- **CLI**: `clap`
-- **Logging**: `tracing`, `tracing-subscriber`
-- **Config**: `dotenv`
-- **UX**: `colored`
-- **Time/UUID**: `chrono`, `uuid`
-- **Errors**: `anyhow`, `thiserror`
-- **Async traits**: `async-trait`
-- **Tests**: `wiremock`
+- Runtime/concurrency: `tokio`
+- HTTP: `reqwest` (rustls TLS)
+- Serialization: `serde`, `serde_json`
+- CLI: `clap`
+- Logging: `tracing`, `tracing-subscriber`
+- Config: `dotenv`
+- UX: `colored`
+- Time/UUID: `chrono`, `uuid`
+- Errors: `anyhow`, `thiserror`
+- Async traits: `async-trait`
+- Tests: `wiremock`
 
 ## Notes and tips
 
-- **Cancellation**: Long-running requests can be cancelled with `Ctrl+C`.
-- **Backoff**: transient server/network errors are retried with exponential backoff.
-- **Security**: never commit your `DEEPSEEK_API_KEY` to version control.
-
+- **Cancellation**: The interactive console loop supports `Ctrl+C` to cancel in-flight requests.
+- **Backoff**: Transient server/network errors are retried with exponential backoff in the console client.
+- **Security**: Never commit your `DEEPSEEK_API_KEY` to version control.
 
