@@ -32,12 +32,6 @@ impl Console {
         input::get_user_input().await
     }
 
-    /// Prompt the user with a custom message and return the entered line (trimmed)
-    #[allow(dead_code)]
-    pub async fn prompt_user(prompt_text: &str) -> Result<String> {
-        input::prompt_user(prompt_text).await
-    }
-
     /// Check if the input is a quit command
     #[allow(dead_code)]
     pub fn is_quit_command(input_text: &str) -> bool {
