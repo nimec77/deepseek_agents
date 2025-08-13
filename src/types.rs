@@ -115,11 +115,4 @@ pub struct ValidationV1 {
     pub created_at: String, // RFC3339
 }
 
-// Helper input for Agent2 to accept both task and solution
-#[derive(Debug, Clone)]
-pub struct AuditInput {
-    pub task: TaskSpec,
-    pub solution: SolutionV1,
-}
-
-
+// (Removed duplicate AuditInput; the canonical type lives in `crate::agents::AuditInput`)

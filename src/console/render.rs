@@ -29,6 +29,7 @@ pub fn display_loading() {
     println!("{}", "🔄 Sending request to DeepSeek...".blue().italic());
 }
 
+#[allow(dead_code)]
 pub fn display_response(response: &DeepSeekResponse) {
     println!("\n{}", "📋 Structured Response:".bright_green().bold());
     println!(
@@ -81,6 +82,7 @@ pub fn display_error(error: &Error) {
     }
 }
 
+#[allow(dead_code)]
 pub fn display_deepseek_error(error: &DeepSeekError) {
     let user_message = error.user_message();
     match error {
@@ -144,6 +146,7 @@ pub fn display_deepseek_error(error: &DeepSeekError) {
     println!();
 }
 
+#[allow(dead_code)]
 pub fn display_goodbye() {
     println!("{}", "👋 Goodbye!".bright_yellow().bold());
 }

@@ -27,21 +27,25 @@ impl Console {
     }
 
     /// Get user input from the console (async)
+    #[allow(dead_code)]
     pub async fn get_user_input() -> Result<String> {
         input::get_user_input().await
     }
 
     /// Prompt the user with a custom message and return the entered line (trimmed)
+    #[allow(dead_code)]
     pub async fn prompt_user(prompt_text: &str) -> Result<String> {
         input::prompt_user(prompt_text).await
     }
 
     /// Check if the input is a quit command
+    #[allow(dead_code)]
     pub fn is_quit_command(input_text: &str) -> bool {
         input::is_quit_command(input_text)
     }
 
     /// Display a loading message
+    #[allow(dead_code)]
     pub fn display_loading() {
         render::display_loading();
     }
@@ -52,6 +56,7 @@ impl Console {
     }
 
     /// Display the structured response from DeepSeek
+    #[allow(dead_code)]
     pub fn display_response(response: &DeepSeekResponse) {
         render::display_response(response);
     }
@@ -72,16 +77,19 @@ impl Console {
     }
 
     /// Display a DeepSeekError with appropriate styling and context
+    #[allow(dead_code)]
     pub fn display_deepseek_error(error: &DeepSeekError) {
         render::display_deepseek_error(error);
     }
 
     /// Display a goodbye message
+    #[allow(dead_code)]
     pub fn display_goodbye() {
         render::display_goodbye();
     }
 
     /// Run the main console loop (interactive mode)
+    #[allow(dead_code)]
     pub async fn run(&self) -> Result<()> {
         Self::display_welcome();
         println!(

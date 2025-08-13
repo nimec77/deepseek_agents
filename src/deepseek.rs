@@ -32,11 +32,13 @@ pub enum DeepSeekError {
 
 impl DeepSeekError {
     /// Check if the error indicates server is busy
+    #[allow(dead_code)]
     pub fn is_server_busy(&self) -> bool {
         matches!(self, DeepSeekError::ServerBusy)
     }
 
     /// Check if the error is a network-related issue
+    #[allow(dead_code)]
     pub fn is_network_error(&self) -> bool {
         matches!(self, DeepSeekError::NetworkError { .. })
     }
@@ -80,6 +82,7 @@ impl DeepSeekError {
 
 /// Define the expected JSON response structure from DeepSeek
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct DeepSeekResponse {
     pub title: String,
     pub description: String,
@@ -148,6 +151,7 @@ impl DeepSeekClient {
         Ok(Self { client, config })
     }
     /// Send a request to the DeepSeek API with retry logic
+    #[allow(dead_code)]
     pub async fn send_request(&self, user_input: &str) -> Result<DeepSeekResponse, DeepSeekError> {
         let mut attempts = 0;
         let max_attempts = 3;
@@ -176,6 +180,7 @@ impl DeepSeekClient {
     }
 
     /// Send a single request to the DeepSeek API and return a structured response
+    #[allow(dead_code)]
     async fn send_request_once(&self, user_input: &str) -> Result<DeepSeekResponse, DeepSeekError> {
         let current_timestamp = Utc::now().to_rfc3339();
 

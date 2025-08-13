@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 /// Get user input from the console (async version)
+#[allow(dead_code)]
 pub async fn get_user_input() -> Result<String> {
     print!("{}", "💬 Enter your question: ".bright_cyan().bold());
     io::stdout().flush().unwrap();
@@ -19,6 +20,7 @@ pub async fn get_user_input() -> Result<String> {
 }
 
 /// Prompt the user with a custom message and return the entered line (trimmed)
+#[allow(dead_code)]
 pub async fn prompt_user(prompt_text: &str) -> Result<String> {
     print!("{}", prompt_text.bright_cyan().bold());
     io::stdout().flush().unwrap();
@@ -34,6 +36,7 @@ pub async fn prompt_user(prompt_text: &str) -> Result<String> {
 }
 
 /// Check if the input is a quit command
+#[allow(dead_code)]
 pub fn is_quit_command(input: &str) -> bool {
     input.eq_ignore_ascii_case("/quit") || input.eq_ignore_ascii_case("/exit")
 }
