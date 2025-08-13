@@ -2,7 +2,7 @@ use anyhow::Error;
 use colored::*;
 
 use crate::deepseek::{DeepSeekError, DeepSeekResponse};
-use crate::types::{DeliverableType, SolutionV1, ValidationV1, Verdict};
+use crate::types::{DeliverableType, SolutionV1, ValidationV1, Verdict, TaskSpec};
 
 pub fn display_welcome() {
     println!(
@@ -146,6 +146,45 @@ pub fn display_deepseek_error(error: &DeepSeekError) {
 
 pub fn display_goodbye() {
     println!("{}", "👋 Goodbye!".bright_yellow().bold());
+}
+
+pub fn display_task(task: &TaskSpec) {
+    println!("\n{}", "🗒️  Task Specification".bright_yellow().bold());
+    println!("{}", "┌─────────────────────────────────────────────────────────────".yellow());
+    println!(
+        "{} {}",
+        "│ 🧩 Task ID:".yellow(),
+        task.task_id.to_string().bright_white()
+    );
+    println!(
+        "{} {}",
+        "│ 🎯 Goal:".yellow(),
+        task.goal.white()
+    );
+    println!("{}", "│ 📝 Input:".yellow());
+    for line in task.input.lines() {
+        println!("│   {}", line.white());
+    }
+    if !task.acceptance_criteria.is_empty() {
+        println!("{}", "│ ✅ Acceptance Criteria:".yellow());
+        for (idx, crit) in task.acceptance_criteria.iter().enumerate() {
+            println!("│   {}. {}", idx + 1, crit.white());
+        }
+    }
+    println!(
+        "{} {}",
+        "│ 📦 Deliverable Type:".yellow(),
+        format!("{:?}", task.deliverable_type).white()
+    );
+    if let Some(hints) = &task.hints {
+        if !hints.trim().is_empty() {
+            println!("{}", "│ 💡 Hints:".yellow());
+            for line in hints.lines() {
+                println!("│   {}", line.white());
+            }
+        }
+    }
+    println!("{}", "└─────────────────────────────────────────────────────────────\n".yellow());
 }
 
 pub fn display_solution(solution: &SolutionV1) {

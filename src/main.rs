@@ -87,6 +87,8 @@ async fn main() -> Result<()> {
         "Agent1 (Producer): received task_id={} — processing",
         task_spec.task_id
     );
+    // Pretty-print the received task before execution
+    Console::display_task(&task_spec);
     let solution = agent1.execute(&task_spec).await?;
     tracing::info!("Agent1 produced solution: {}", solution.solution_id);
     tracing::info!("Agent1 saved solution to {}", solution_path.display());

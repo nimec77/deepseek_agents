@@ -46,6 +46,11 @@ impl Console {
         render::display_loading();
     }
 
+    /// Display a pretty-printed TaskSpec
+    pub fn display_task(task: &TaskSpec) {
+        render::display_task(task);
+    }
+
     /// Display the structured response from DeepSeek
     pub fn display_response(response: &DeepSeekResponse) {
         render::display_response(response);
@@ -202,6 +207,8 @@ impl Console {
 
         let task_spec = self.collect_task_spec().await?;
         println!("{}", "📨 Received task specification from user".bright_white());
+        // Pretty print the received task spec before processing
+        Self::display_task(&task_spec);
 
         tokio::fs::create_dir_all(out_dir).await?;
         let out_path = out_dir.join("solution.json");
