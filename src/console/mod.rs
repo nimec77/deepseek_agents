@@ -70,6 +70,10 @@ impl Console {
     /// Run the main console loop (interactive mode)
     pub async fn run(&self) -> Result<()> {
         Self::display_welcome();
+        println!(
+            "{}",
+            "ℹ️  Interactive mode: Enter a task for the agent. The app will send it, process the response, and display the result. Type '/quit' to exit.".blue()
+        );
 
         loop {
             select! {
@@ -80,6 +84,7 @@ impl Console {
                 }
                 // Handle user input
                 input_result = Self::get_user_input() => {
+                    println!("{}", "📨 Received input from user".bright_white());
                     let input = match input_result {
                         Ok(input) => input,
                         Err(e) => {
@@ -107,8 +112,12 @@ impl Console {
                             break;
                         }
                         result = self.client.send_request(&input) => {
+                            println!("{}", "🛠️ Processing input with agent".bright_white());
                             match result {
-                                Ok(response) => Self::display_response(&response),
+                                Ok(response) => {
+                                    println!("{}", "💾 Processed. Displaying result".bright_white());
+                                    Self::display_response(&response)
+                                },
                                 Err(e) => Self::display_deepseek_error(&e),
                             }
                         }
@@ -177,19 +186,30 @@ impl Console {
     /// Interactive flow: collect a task and run ProducerAgent. Saves to out_dir/solution.json
     pub async fn run_producer_agent(&self, out_dir: &Path) -> Result<()> {
         Self::display_welcome();
+        println!(
+            "{}",
+            "ℹ️  Interactive mode: Enter a task for the ProducerAgent. It will process your input and save the result to a file.".blue()
+        );
 
         let task_spec = self.collect_task_spec().await?;
+        println!("{}", "📨 Received task specification from user".bright_white());
 
         tokio::fs::create_dir_all(out_dir).await?;
         let out_path = out_dir.join("solution.json");
 
         let agent = ProducerAgent::new(self.client.clone(), out_path.clone());
+        println!("{}", "🛠️ ProducerAgent is processing the task".bright_white());
         match agent.execute(&task_spec).await {
             Ok(solution) => {
                 println!(
                     "{} {}\n  {}",
                     "✅ ProducerAgent completed.".bright_green().bold(),
                     format!("solution_id={}", solution.solution_id).bright_white(),
+                    out_path.display()
+                );
+                println!(
+                    "{} {}",
+                    "💾 Saved result to".bright_white(),
                     out_path.display()
                 );
             }

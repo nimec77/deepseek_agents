@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use serde_json::json;
 use tokio::fs;
+use tracing::info;
 
 use crate::deepseek::{ChatMessage, DeepSeekClient};
 use crate::types::{SolutionV1, TaskSpec, ValidationV1};
@@ -45,6 +46,7 @@ impl Agent for ProducerAgent {
     type Output = SolutionV1;
 
     async fn execute(&self, task: &Self::Input) -> Result<Self::Output, AgentError> {
+        info!("ProducerAgent: preparing output directory at {}", self.out_path.display());
         fs::create_dir_all(
             self.out_path
                 .parent()
@@ -84,7 +86,9 @@ Schema (SolutionV1):
             ChatMessage { role: "user".to_string(), content: user_payload.to_string() },
         ];
 
+        info!("ProducerAgent: sending task {} to LLM", task.task_id);
         let raw = self.client.send_messages_raw(messages).await?;
+        info!("ProducerAgent: received model response, parsing JSON");
         let mut solution: SolutionV1 = serde_json::from_str(&raw)?;
 
         // Ensure schema_version and timestamps if model forgot
@@ -98,6 +102,11 @@ Schema (SolutionV1):
         // Persist
         let pretty = serde_json::to_string_pretty(&solution)?;
         fs::write(&self.out_path, pretty).await?;
+        info!(
+            "ProducerAgent: saved solution {} to {}",
+            solution.solution_id,
+            self.out_path.display()
+        );
         Ok(solution)
     }
 }
@@ -125,6 +134,10 @@ impl Agent for AuditorAgent {
     type Output = ValidationV1;
 
     async fn execute(&self, input: &Self::Input) -> Result<Self::Output, AgentError> {
+        info!(
+            "AuditorAgent: preparing output directory at {}",
+            self.out_path.display()
+        );
         fs::create_dir_all(
             self.out_path
                 .parent()
@@ -162,7 +175,13 @@ Schema (ValidationV1):
             ChatMessage { role: "user".to_string(), content: user_payload.to_string() },
         ];
 
+        info!(
+            "AuditorAgent: auditing solution {} for task {}",
+            input.solution.solution_id,
+            input.task.task_id
+        );
         let raw = self.client.send_messages_raw(messages).await?;
+        info!("AuditorAgent: received model response, parsing JSON");
         let mut validation: ValidationV1 = serde_json::from_str(&raw)?;
         if validation.schema_version.is_empty() {
             validation.schema_version = "validation_v1".to_string();
@@ -173,6 +192,11 @@ Schema (ValidationV1):
 
         let pretty = serde_json::to_string_pretty(&validation)?;
         fs::write(&self.out_path, pretty).await?;
+        info!(
+            "AuditorAgent: saved validation for solution {} to {}",
+            validation.solution_id,
+            self.out_path.display()
+        );
         Ok(validation)
     }
 }

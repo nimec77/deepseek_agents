@@ -20,3 +20,6 @@ Thumbs.db
 # Backup files
 **/*.rs.bk
 *.orig
+
+# task output
+out/

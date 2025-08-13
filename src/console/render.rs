@@ -15,6 +15,10 @@ pub fn display_welcome() {
     );
     println!(
         "{}",
+        "Enter a task for the agent to process. In interactive mode, your input will be sent to the agent and the result will be displayed.".blue()
+    );
+    println!(
+        "{}",
         "Make sure to set DEEPSEEK_API_KEY environment variable.".blue()
     );
     println!("{}", "Type '/quit' or '/exit' to stop.\n".blue());
