@@ -442,7 +442,9 @@ fn is_official_deepseek_host(base_url: &str) -> bool {
     base_url.starts_with("https://api.deepseek.com")
 }
 
+
 #[cfg(not(feature = "deepseek_api"))]
+#[allow(dead_code)]
 fn is_official_deepseek_host(_base_url: &str) -> bool {
     false
 }
@@ -456,4 +458,5 @@ fn map_model_string_to_ext(model: &str) -> ExtModelType {
 }
 
 #[cfg(not(feature = "deepseek_api"))]
+#[allow(dead_code)]
 fn map_model_string_to_ext(_model: &str) {}
