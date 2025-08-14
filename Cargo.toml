@@ -18,6 +18,13 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 uuid = { version = "1", features = ["v4"] }
 async-trait = "0.1"
+deepseek-api = { version = "0.1.1", optional = true }
 
 [dev-dependencies]
 wiremock = "0.6"
+
+[features]
+# Opt-in migration to external deepseek-api crate. When enabled, our DeepSeekClient
+# will delegate to the external client for the default production base URL, while
+# preserving the internal HTTP implementation for custom base URLs (e.g., tests).
+deepseek_api = ["dep:deepseek-api"]
